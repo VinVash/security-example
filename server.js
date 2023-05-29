@@ -24,11 +24,15 @@ const AUTH_OPTIONS = {
 }
 
 const verifyCallback = (accessToken, refreshToken, profile, done) => {
+  // We will have access to accessToken, refreshToken, profile, done once the OAuth flow is completed inside the passport middleware.
   console.log('Google profile', profile);
+  // Any other operations / database operations.
   done(null, profile);
 }
 
 passport.use(new Strategy(AUTH_OPTIONS, verifyCallback));
+
+// https://stackoverflow.com/questions/27637609/understanding-passport-serialize-deserialize
 
 // Save the session to the cookie.
 passport.serializeUser((user, done) => {
@@ -53,12 +57,14 @@ app.use(cookieSession({
   keys: [ config.COOKIE_KEY_1, config.COOKIE_KEY_2 ]
 }))
 
-app.use(passport.initialize()); // sets the passport session
-app.use(passport.session());
+app.use(passport.initialize()); // so that passport understands the cookieSession and the req.user object, that it set by the cookieSession middleware.
+app.use(passport.session()); // it authenticates the session that is being sent to the server. It uses the config.cookie_key 1 and 2 to validate that everything is signed.
+// It then sets the req.user property to contain the user's identity.
+// In short the passport.session() middleware will allow the deserialize function to be called.
 
 const checkLoggedIn = (req, res, next) => {
   console.log('Current user is: ', req.user);
-  const isLoggedIn = req.isAuthenticated() && req.user;
+  const isLoggedIn = req.isAuthenticated() && req.user; // req.isAuthenticated() is populated by passport.
   if(!isLoggedIn)
   return res.status(401).json({
     error: 'You must log in!',
@@ -81,7 +87,7 @@ app.get('/auth/google/callback',
 });
 
 app.get('/auth/logout', (req, res) => {
-  req.logout(); // Removes req.user and clears any logged in session.
+  req.logout(); // Removes req.user and clears any logged in session. req.logout() is a passport function.
   return res.redirect('/');
 });
 
